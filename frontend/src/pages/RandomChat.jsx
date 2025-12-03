@@ -3,13 +3,13 @@ import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
 import '../styles/RandomChat.css';
 
-const SOCKET_SERVER_URL = 'http://localhost:5000';
+// Updated backend URL
+const SOCKET_SERVER_URL = 'https://chat-ojes.onrender.com';
 
 export default function RandomChat() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const socketRef = useRef();
-  const [connected, setConnected] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,17 +20,28 @@ export default function RandomChat() {
   }, []);
 
   const connectToRandomChat = () => {
-    socketRef.current = io(SOCKET_SERVER_URL);
+    socketRef.current = io(SOCKET_SERVER_URL, {
+  transports: ['websocket', 'polling'],
+});
+
+
     socketRef.current.emit('find_random');
-    setConnected(true);
     setMessages([{ sender: 'system', text: 'Connecting to a stranger...' }]);
 
     socketRef.current.on('receive_message', (message) => {
-      setMessages(prev => [...prev, { sender: 'stranger', ...message }]);
+      setMessages((prev) => [...prev, { sender: 'stranger', ...message }]);
     });
 
     socketRef.current.on('system_message', (msg) => {
-      setMessages(prev => [...prev, { sender: 'system', text: msg }]);
+      setMessages((prev) => [...prev, { sender: 'system', text: msg }]);
+    });
+
+    socketRef.current.on('connect_error', (err) => {
+      setMessages((prev) => [
+        ...prev,
+        { sender: 'system', text: 'Failed to connect. Retrying...' },
+      ]);
+      console.error('Socket connection error:', err);
     });
   };
 
